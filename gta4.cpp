@@ -15,16 +15,79 @@ constexpr uint8_t block_signature[5] = { 'B', 'L', 'O', 'C', 'K' };
 constexpr uint8_t end_signature[4] = { 'E', 'N', 'D', 0x00 };
 
 int block_count = 0;
+int header_size = 9; //not final
 std::unordered_map<int, size_t> block_offsets = {};//k=count v=start offset
 
+//basic info
 void parse_block_zero() {
 	auto offset = block_offsets[1];
 	std::println("parsing block zero at offset {}", offset);
 
-	uint32_t month = 0;
-	std::memcpy(&month, &save_data[offset + 9 + 0x28], sizeof(month));
+	uint32_t month = 0, day = 0, hours = 0, minutes = 0, dayweek = 0;
+	std::memcpy(&month, &save_data[offset + header_size + 0x28], sizeof(month));
+	std::memcpy(&day, &save_data[offset + header_size + 0x2c], sizeof(day));
+	std::memcpy(&hours, &save_data[offset + header_size + 0x30], sizeof(hours));
+	std::memcpy(&minutes, &save_data[offset + header_size + 0x34], sizeof(minutes));
+	std::memcpy(&dayweek, &save_data[offset + header_size + 0x38], sizeof(dayweek));
+
+	bool has_cheated = false;
+	std::memcpy(&has_cheated, &save_data[offset + header_size + 0x3c], sizeof(has_cheated));
 
 	std::println("in-game month: {}", month);
+	std::println("in-game day: {}", day);
+	std::println("in-game hours: {}", hours);
+	std::println("in-game minutes: {}", minutes);
+	std::println("in-game day of the week: {}", dayweek);
+
+	std::println("has cheated?: {}", has_cheated);
+}
+
+//juicy
+void parse_block_one() {
+	auto offset = block_offsets[2];
+	auto player_info = offset + 5 + 0x14;
+	std::println("parsing block 1 at offset {}", offset);
+
+	uint32_t money = 0, display_money = 0, max_wanted = 0, max_chaos = 0;
+	uint8_t never_tired = 0, fast_reload = 0, fireproof = 0, keepweaponsbusted = 0, freehealthcare = 0, candriveby = 0, canbehassledgngs = 0;
+	uint16_t maxhealth = 0, maxarmor = 0;
+	float health = 0.0f, armor = 0.0f;
+
+	std::memcpy(&money, &save_data[player_info + 0x08], sizeof(money));
+	std::memcpy(&display_money, &save_data[player_info + 0x10], sizeof(display_money));
+
+	std::memcpy(&never_tired, &save_data[player_info + 0x20], sizeof(never_tired));
+	std::memcpy(&fast_reload, &save_data[player_info + 0x21], sizeof(fast_reload));
+	std::memcpy(&fireproof, &save_data[player_info + 0x22], sizeof(fireproof));
+
+	std::memcpy(&maxhealth, &save_data[player_info + 0x24], sizeof(maxhealth));
+	std::memcpy(&maxarmor, &save_data[player_info + 0x26], sizeof(maxarmor));
+
+	std::memcpy(&keepweaponsbusted, &save_data[player_info + 0x28], sizeof(keepweaponsbusted));
+	std::memcpy(&freehealthcare, &save_data[player_info + 0x29], sizeof(freehealthcare));
+	std::memcpy(&candriveby, &save_data[player_info + 0x2a], sizeof(candriveby));
+	std::memcpy(&canbehassledgngs, &save_data[player_info + 0x2b], sizeof(canbehassledgngs));
+
+	std::memcpy(&max_wanted, &save_data[player_info + 0x30], sizeof(max_wanted));
+	std::memcpy(&max_chaos, &save_data[player_info + 0x34], sizeof(max_chaos));
+
+	std::memcpy(&health, &save_data[player_info + 0x50], sizeof(health));
+	std::memcpy(&armor, &save_data[player_info + 0x54], sizeof(armor));
+
+	std::println("health: {}/{}", health, maxhealth);
+	std::println("armor: {}/{}", armor, maxarmor);
+	std::println("money: {} ({})", money, display_money);
+
+	std::println("max wanted level: {}", max_wanted);
+	std::println("max chaos: {}", max_chaos);
+
+	std::println("never tired: {}", never_tired);
+	std::println("fast reload: {}", fast_reload);
+	std::println("fireproof: {}", fireproof);
+	std::println("keep weapons after busted: {}", keepweaponsbusted);
+	std::println("free health care: {}", freehealthcare);
+	std::println("can drive-by: {}", candriveby);
+	std::println("can be hassled by gangs: {}", canbehassledgngs);
 }
 
 size_t read_blocks(size_t offset) {
@@ -80,6 +143,7 @@ bool read_save( fs::path path ) {
     std::println("read all blocks in savefile!");
 
     parse_block_zero();
+    parse_block_one();
 
     save_file.close();
     return true;
