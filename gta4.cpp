@@ -1,3 +1,5 @@
+// source: https://gtamods.com/wiki/Saves_(GTA_4)
+
 #include <print>
 #include <fstream>
 #include <filesystem>
@@ -15,32 +17,34 @@ constexpr uint8_t end_signature[4] = { 'E', 'N', 'D', 0x00 };
 int block_count = 0;
 std::unordered_map<int, size_t> block_offsets = {};//k=count v=start offset
 
-size_t read_blocks(size_t offset ) {
-	if (offset + 9 > save_data.size()) {
+size_t read_blocks(size_t offset) {
+	if (offset + 8 > save_data.size()) {
 	    std::println("{} out of bounds, bailing!", offset);
 	    return 0;
-	}	
-
-	auto res = std::memcmp(&save_data[offset], block_signature, 5);
-	auto eres = std::memcmp(&save_data[offset], end_signature, 4);
-
+	}
 	std::println("found offset: {}", offset);
 
-	if(res != 0 && eres != 0) {
+	auto block_res = std::memcmp(&save_data[offset], block_signature, 5);
+	auto end_res = std::memcmp(&save_data[offset], end_signature, 4);
+
+	if (block_res != 0 && end_res != 0) {
+		auto end_res_checksum = std::memcmp(&save_data[offset + 4], end_signature, 4);
+		if (end_res_checksum == 0) {
+			std::println("reached END\\0 block (after checksum)!");
+			return offset + 4;
+		}
 		std::println("{} does not match a block or end signature, bailing!", offset);
-		return 0; //error
+		return 0;
 	}
-	if(eres == 0) {
+	if (end_res == 0) {
 		std::println("reached END\\0 block!");
 		return offset;
 	}
 
 	block_count += 1;
 	block_offsets.insert({block_count, offset});
-
 	uint32_t size = save_data[offset+5] | (save_data[offset+6] << 8) | (save_data[offset+7] << 16) | (save_data[offset+8] << 24);
-	size_t next_offset = offset + size;
-	return read_blocks(next_offset);
+	return read_blocks(offset + size);
 }
 
 bool read_save( fs::path path ) {

@@ -1,2 +1,5 @@
 rdr3_p4pc
 compile_commands.json
+*.exe
+*.obj
+SGTA401
