@@ -17,6 +17,16 @@ constexpr uint8_t end_signature[4] = { 'E', 'N', 'D', 0x00 };
 int block_count = 0;
 std::unordered_map<int, size_t> block_offsets = {};//k=count v=start offset
 
+void parse_block_zero() {
+	auto offset = block_offsets[1];
+	std::println("parsing block zero at offset {}", offset);
+
+	uint32_t month = 0;
+	std::memcpy(&month, &save_data[offset + 9 + 0x28], sizeof(month));
+
+	std::println("in-game month: {}", month);
+}
+
 size_t read_blocks(size_t offset) {
 	if (offset + 8 > save_data.size()) {
 	    std::println("{} out of bounds, bailing!", offset);
@@ -61,13 +71,15 @@ bool read_save( fs::path path ) {
         return false;
     }
 
-    if(read_blocks(0x110) == 0) { //error
+    auto read_res = read_blocks(0x110);
+    if(read_res == 0 || block_offsets.size() == 0) { // 0 = error
 	std::println("failed to read blocks in savegame!");
 	save_file.close();
 	return false;
     }
-
     std::println("read all blocks in savefile!");
+
+    parse_block_zero();
 
     save_file.close();
     return true;
